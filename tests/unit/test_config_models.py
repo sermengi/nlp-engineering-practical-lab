@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,8 @@ from nlp_lab.core.config import (
     PreprocessingConfig,
     ProjectConfig,
     RuntimeConfig,
+    compute_config_hash,
+    generate_run_id,
     load_common_config,
     load_experiment_config,
     load_layered_experiment_config,
@@ -235,3 +238,64 @@ def test_load_layered_experiment_config_rejects_unsupported_override_fields() ->
 def test_config_overrides_require_supported_fields() -> None:
     with pytest.raises(ValidationError):
         ConfigOverrides()
+
+
+@pytest.mark.unit
+def test_generate_run_id_uses_timestamp_experiment_name_and_config_hash() -> None:
+    config = load_layered_experiment_config(
+        "configs/common/default.yaml",
+        "configs/experiments/classification_baseline.yaml",
+    )
+
+    run_id = generate_run_id(config, timestamp=datetime(2026, 7, 30, 12, 55, 30))
+
+    assert run_id == f"20260730-125530_classification-baseline_{compute_config_hash(config)}"
+
+
+@pytest.mark.unit
+def test_config_hash_excludes_timestamp() -> None:
+    config = load_layered_experiment_config(
+        "configs/common/default.yaml",
+        "configs/experiments/classification_baseline.yaml",
+    )
+
+    first_run_id = generate_run_id(config, timestamp=datetime(2026, 7, 30, 12, 55, 30))
+    second_run_id = generate_run_id(config, timestamp=datetime(2026, 7, 30, 13, 2, 15))
+
+    assert first_run_id.rsplit("_", maxsplit=1)[1] == second_run_id.rsplit("_", maxsplit=1)[1]
+
+
+@pytest.mark.unit
+def test_config_hash_changes_when_hash_payload_changes() -> None:
+    baseline = load_layered_experiment_config(
+        "configs/common/default.yaml",
+        "configs/experiments/classification_baseline.yaml",
+    )
+    changed_batch_size = load_layered_experiment_config(
+        "configs/common/default.yaml",
+        "configs/experiments/classification_baseline.yaml",
+        overrides={"batch_size": 32},
+    )
+    changed_output_root = load_layered_experiment_config(
+        "configs/common/default.yaml",
+        "configs/experiments/classification_baseline.yaml",
+        overrides={"output_root": "outputs/other"},
+    )
+
+    assert compute_config_hash(baseline) != compute_config_hash(changed_batch_size)
+    assert compute_config_hash(baseline) == compute_config_hash(changed_output_root)
+
+
+@pytest.mark.unit
+def test_config_hash_changes_when_seed_changes() -> None:
+    baseline = load_layered_experiment_config(
+        "configs/common/default.yaml",
+        "configs/experiments/classification_baseline.yaml",
+    )
+    changed_seed = load_layered_experiment_config(
+        "configs/common/default.yaml",
+        "configs/experiments/classification_baseline.yaml",
+        overrides={"seed": 123},
+    )
+
+    assert compute_config_hash(baseline) != compute_config_hash(changed_seed)

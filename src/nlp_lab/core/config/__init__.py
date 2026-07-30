@@ -15,6 +15,12 @@ from nlp_lab.core.config.loader import (
     load_modal_config,
     merge_config_dicts,
 )
+from nlp_lab.core.config.run_id import (
+    compute_config_hash,
+    config_hash_payload,
+    generate_run_id,
+    slugify_run_component,
+)
 from nlp_lab.core.config.runtime import (
     DatasetConfig,
     EvaluationConfig,
@@ -45,6 +51,9 @@ __all__ = [
     "RemoteStorageConfig",
     "RunNamingConfig",
     "RuntimeConfig",
+    "compute_config_hash",
+    "config_hash_payload",
+    "generate_run_id",
     "load_common_config",
     "load_config",
     "load_config_dict",
@@ -52,4 +61,5 @@ __all__ = [
     "load_layered_experiment_config",
     "load_modal_config",
     "merge_config_dicts",
+    "slugify_run_component",
 ]
