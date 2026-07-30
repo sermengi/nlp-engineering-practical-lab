@@ -77,6 +77,7 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+**/.ipynb_checkpoints/
 
 # IPython
 profile_default/
@@ -156,6 +157,31 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Model and dataset caches
+.cache/
+.hf_cache/
+.huggingface/
+hf_cache/
+transformers_cache/
+datasets_cache/
+
+# Large datasets
+/data/raw/**
+/data/interim/**
+/data/processed/**
+!/data/raw/.gitkeep
+!/data/interim/.gitkeep
+!/data/processed/.gitkeep
+
+# Generated outputs
+/outputs/**
+!/outputs/experiments/
+!/outputs/experiments/.gitkeep
+!/outputs/reports/
+!/outputs/reports/.gitkeep
+!/outputs/predictions/
+!/outputs/predictions/.gitkeep
 
 # Spyder project settings
 .spyderproject
