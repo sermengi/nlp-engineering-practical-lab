@@ -1,4 +1,3 @@
-import json
 import platform
 import socket
 import subprocess
@@ -9,9 +8,52 @@ from importlib import metadata
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
-import yaml
 from pydantic import Field
 
+from nlp_lab.core.artifacts.paths import (
+    CONSOLE_LOG_FILENAME as CONSOLE_LOG_FILENAME,
+)
+from nlp_lab.core.artifacts.paths import (
+    ENVIRONMENT_FILENAME as ENVIRONMENT_FILENAME,
+)
+from nlp_lab.core.artifacts.paths import (
+    ERRORS_FILENAME as ERRORS_FILENAME,
+)
+from nlp_lab.core.artifacts.paths import (
+    METRICS_FILENAME as METRICS_FILENAME,
+)
+from nlp_lab.core.artifacts.paths import (
+    PREDICTIONS_FILENAME as PREDICTIONS_FILENAME,
+)
+from nlp_lab.core.artifacts.paths import (
+    RESOLVED_CONFIG_FILENAME as RESOLVED_CONFIG_FILENAME,
+)
+from nlp_lab.core.artifacts.paths import (
+    RUN_METADATA_FILENAME as RUN_METADATA_FILENAME,
+)
+from nlp_lab.core.artifacts.paths import (
+    RUNTIME_FILENAME as RUNTIME_FILENAME,
+)
+from nlp_lab.core.artifacts.paths import (
+    SUMMARY_FILENAME as SUMMARY_FILENAME,
+)
+from nlp_lab.core.artifacts.paths import (
+    RunArtifactPaths as RunArtifactPaths,
+)
+from nlp_lab.core.artifacts.paths import (
+    build_run_artifact_paths,
+)
+from nlp_lab.core.artifacts.serializers import (
+    ArtifactSerializationError as ArtifactSerializationError,
+)
+from nlp_lab.core.artifacts.serializers import (
+    append_jsonl as append_jsonl_file,
+)
+from nlp_lab.core.artifacts.serializers import (
+    write_json,
+    write_text_atomic,
+    write_yaml,
+)
 from nlp_lab.core.config import ExperimentConfig, generate_run_id
 from nlp_lab.core.config.common import StrictConfigModel, ensure_non_empty
 
@@ -21,15 +63,6 @@ if TYPE_CHECKING:
 RunStatus = Literal["CREATED", "RUNNING", "COMPLETED", "FAILED", "CANCELLED", "INTERRUPTED"]
 ExecutionMode = Literal["local", "modal", "ci"]
 
-RESOLVED_CONFIG_FILENAME = "config.resolved.yaml"
-RUN_METADATA_FILENAME = "run.json"
-ENVIRONMENT_FILENAME = "environment.json"
-METRICS_FILENAME = "metrics.json"
-RUNTIME_FILENAME = "runtime.json"
-PREDICTIONS_FILENAME = "predictions.jsonl"
-ERRORS_FILENAME = "errors.jsonl"
-CONSOLE_LOG_FILENAME = "console.log"
-SUMMARY_FILENAME = "summary.md"
 AMBIGUOUS_METRIC_NAMES = {"f1", "precision", "recall"}
 
 
@@ -73,34 +106,6 @@ class ErrorRecord(StrictConfigModel):
     error_type: str
 
 
-class RunArtifactPaths(StrictConfigModel):
-    run_dir: Path
-    resolved_config: Path
-    run_metadata: Path
-    environment: Path
-    metrics: Path
-    runtime: Path
-    predictions: Path
-    errors: Path
-    console_log: Path
-    summary: Path
-
-
-def build_run_artifact_paths(run_dir: Path) -> RunArtifactPaths:
-    return RunArtifactPaths(
-        run_dir=run_dir,
-        resolved_config=run_dir / RESOLVED_CONFIG_FILENAME,
-        run_metadata=run_dir / RUN_METADATA_FILENAME,
-        environment=run_dir / ENVIRONMENT_FILENAME,
-        metrics=run_dir / METRICS_FILENAME,
-        runtime=run_dir / RUNTIME_FILENAME,
-        predictions=run_dir / PREDICTIONS_FILENAME,
-        errors=run_dir / ERRORS_FILENAME,
-        console_log=run_dir / CONSOLE_LOG_FILENAME,
-        summary=run_dir / SUMMARY_FILENAME,
-    )
-
-
 def create_run_directory(config: ExperimentConfig, run_id: str | None = None) -> RunArtifactPaths:
     resolved_run_id = run_id or generate_run_id(config)
     run_dir = config.runtime.output_root / resolved_run_id
@@ -108,22 +113,13 @@ def create_run_directory(config: ExperimentConfig, run_id: str | None = None) ->
     return build_run_artifact_paths(run_dir)
 
 
-def write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=True) + "\n",
-        encoding="utf-8",
-    )
-
-
 def append_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
-    with path.open("a", encoding="utf-8") as file:
-        for record in records:
-            file.write(json.dumps(record, sort_keys=True, ensure_ascii=True) + "\n")
+    append_jsonl_file(path, records)
 
 
 def write_resolved_config(path: Path, config: ExperimentConfig) -> None:
     payload = config.model_dump(mode="json")
-    path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    write_yaml(path, payload)
 
 
 def write_run_metadata(path: Path, metadata_: RunMetadata) -> None:
@@ -157,7 +153,7 @@ def write_errors(path: Path, records: list[ErrorRecord]) -> None:
 def write_summary(path: Path, title: str, lines: list[str]) -> None:
     safe_title = ensure_non_empty(title)
     content = "\n".join([f"# {safe_title}", "", *lines, ""])
-    path.write_text(content, encoding="utf-8")
+    write_text_atomic(path, content)
 
 
 def write_experiment_result(paths: RunArtifactPaths, result: "ExperimentResult") -> None:
