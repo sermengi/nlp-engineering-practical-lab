@@ -7,13 +7,16 @@ import traceback
 from datetime import datetime
 from importlib import metadata
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import yaml
 from pydantic import Field
 
 from nlp_lab.core.config import ExperimentConfig, generate_run_id
 from nlp_lab.core.config.common import StrictConfigModel, ensure_non_empty
+
+if TYPE_CHECKING:
+    from nlp_lab.core.experiment_result import ExperimentResult
 
 RunStatus = Literal["CREATED", "RUNNING", "COMPLETED", "FAILED", "CANCELLED", "INTERRUPTED"]
 ExecutionMode = Literal["local", "modal", "ci"]
@@ -155,6 +158,17 @@ def write_summary(path: Path, title: str, lines: list[str]) -> None:
     safe_title = ensure_non_empty(title)
     content = "\n".join([f"# {safe_title}", "", *lines, ""])
     path.write_text(content, encoding="utf-8")
+
+
+def write_experiment_result(paths: RunArtifactPaths, result: "ExperimentResult") -> None:
+    write_metrics(paths.metrics, result.metrics)
+    write_runtime(paths.runtime, result.runtime)
+    if result.predictions:
+        write_predictions(paths.predictions, result.predictions)
+    if result.errors:
+        write_errors(paths.errors, result.errors)
+    if result.notes or result.artifacts:
+        write_summary(paths.summary, "Experiment Summary", result.summary_lines())
 
 
 def build_run_metadata(
