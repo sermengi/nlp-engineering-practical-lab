@@ -51,7 +51,10 @@ class LocalFilesystemArtifactWriter:
         )
         write_resolved_config(paths.resolved_config, config)
         write_run_metadata(paths.run_metadata, metadata)
-        write_environment(paths.environment, collect_environment_info())
+        write_environment(
+            paths.environment,
+            collect_environment_info(execution_mode=metadata.execution_mode),
+        )
         return paths, metadata
 
     def write_result(self, paths: RunArtifactPaths, result: ExperimentResult) -> None:

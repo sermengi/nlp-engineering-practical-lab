@@ -1,10 +1,5 @@
-import platform
-import socket
-import subprocess
-import sys
 import traceback
 from datetime import datetime
-from importlib import metadata
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -56,6 +51,8 @@ from nlp_lab.core.artifacts.serializers import (
 )
 from nlp_lab.core.config import ExperimentConfig, generate_run_id
 from nlp_lab.core.config.common import StrictConfigModel, ensure_non_empty
+from nlp_lab.core.environment import EnvironmentInfo
+from nlp_lab.core.environment import collect_environment_info as collect_environment
 
 if TYPE_CHECKING:
     from nlp_lab.core.experiment_result import ExperimentResult
@@ -126,8 +123,14 @@ def write_run_metadata(path: Path, metadata_: RunMetadata) -> None:
     write_json(path, metadata_.model_dump(mode="json"))
 
 
-def write_environment(path: Path, environment: dict[str, Any] | None = None) -> None:
-    write_json(path, environment or collect_environment_info())
+def write_environment(
+    path: Path, environment: dict[str, Any] | EnvironmentInfo | None = None
+) -> None:
+    payload = environment or collect_environment_info()
+    if isinstance(payload, EnvironmentInfo):
+        write_json(path, payload.model_dump(mode="json"))
+    else:
+        write_json(path, payload)
 
 
 def write_metrics(path: Path, metrics: dict[str, float]) -> None:
@@ -250,56 +253,10 @@ def safe_error_message(exception: BaseException) -> str:
     return message.replace("\n", " ").strip()
 
 
-def collect_environment_info() -> dict[str, Any]:
-    torch_info = _collect_torch_info()
-    return {
-        "python_version": sys.version,
-        "os": platform.system(),
-        "os_release": platform.release(),
-        "platform": platform.platform(),
-        "pytorch_version": _package_version("torch"),
-        "transformers_version": _package_version("transformers"),
-        "cuda_available": torch_info["cuda_available"],
-        "cuda_version": torch_info["cuda_version"],
-        "gpu_name": torch_info["gpu_name"],
-        "cpu": platform.processor() or platform.machine(),
-        "git_commit": _git_output(["git", "rev-parse", "HEAD"]),
-        "git_dirty": bool(_git_output(["git", "status", "--porcelain"])),
-        "hostname": socket.gethostname(),
-    }
-
-
-def _package_version(package_name: str) -> str | None:
-    try:
-        return metadata.version(package_name)
-    except metadata.PackageNotFoundError:
-        return None
-
-
-def _collect_torch_info() -> dict[str, Any]:
-    try:
-        import torch
-    except ImportError:
-        return {"cuda_available": False, "cuda_version": None, "gpu_name": None}
-
-    cuda_available = bool(torch.cuda.is_available())
-    gpu_name = torch.cuda.get_device_name(0) if cuda_available else None
-    return {
-        "cuda_available": cuda_available,
-        "cuda_version": torch.version.cuda,
-        "gpu_name": gpu_name,
-    }
-
-
-def _git_output(command: list[str]) -> str | None:
-    try:
-        completed = subprocess.run(
-            command,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return None
-    output = completed.stdout.strip()
-    return output or None
+def collect_environment_info(
+    execution_mode: ExecutionMode = "local",
+    worker_id: str | None = None,
+) -> dict[str, Any]:
+    return collect_environment(execution_mode=execution_mode, worker_id=worker_id).model_dump(
+        mode="json"
+    )

@@ -1,4 +1,3 @@
-import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -6,6 +5,7 @@ from pydantic import field_validator
 
 from nlp_lab.core.config import ExperimentConfig, generate_run_id
 from nlp_lab.core.config.common import StrictConfigModel, ensure_non_empty
+from nlp_lab.core.environment import collect_git_metadata
 from nlp_lab.core.run_artifacts import (
     ExecutionMode,
     RunArtifactPaths,
@@ -98,21 +98,8 @@ class RunContext(StrictConfigModel):
 
 
 def collect_git_state() -> GitState:
+    git = collect_git_metadata()
     return GitState(
-        commit=_git_output(["git", "rev-parse", "HEAD"]),
-        dirty=bool(_git_output(["git", "status", "--porcelain"])),
+        commit=git.commit,
+        dirty=git.dirty,
     )
-
-
-def _git_output(command: list[str]) -> str | None:
-    try:
-        completed = subprocess.run(
-            command,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return None
-    output = completed.stdout.strip()
-    return output or None

@@ -215,8 +215,11 @@ def test_write_metrics_rejects_ambiguous_metric_names(tmp_path: Path) -> None:
 def test_collect_environment_info_omits_secret_like_fields() -> None:
     environment = collect_environment_info()
 
-    assert "python_version" in environment
-    assert "platform" in environment
-    assert "git_commit" in environment
-    assert "git_dirty" in environment
+    assert "python" in environment
+    assert "os" in environment
+    assert "package_versions" in environment
+    assert "cuda" in environment
+    assert "git" in environment
+    assert environment["execution_mode"] == "local"
+    assert "platform" in environment["os"]
     assert not any("token" in key.lower() or "secret" in key.lower() for key in environment)
