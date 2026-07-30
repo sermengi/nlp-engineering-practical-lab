@@ -1,6 +1,15 @@
-from pydantic import Field, field_validator
+from typing import Literal
 
-from nlp_lab.core.config.common import ProjectConfig, StrictConfigModel, ensure_non_empty
+from pydantic import Field, field_validator, model_validator
+
+from nlp_lab.core.config.common import (
+    CachePathsConfig,
+    LoggingConfig,
+    ProjectConfig,
+    RunNamingConfig,
+    StrictConfigModel,
+    ensure_non_empty,
+)
 from nlp_lab.core.config.runtime import (
     DatasetConfig,
     EvaluationConfig,
@@ -11,9 +20,35 @@ from nlp_lab.core.config.runtime import (
 )
 
 
-class ExperimentConfig(StrictConfigModel):
-    experiment_name: str = Field(default="default")
+class ExperimentMetadataConfig(StrictConfigModel):
+    name: str = "default"
+    task: Literal["text-classification"] | str = "text-classification"
+    description: str | None = None
+
+    @field_validator("name", "task")
+    @classmethod
+    def validate_required_text(cls, value: str) -> str:
+        return ensure_non_empty(value)
+
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return ensure_non_empty(value)
+
+
+class CommonConfig(StrictConfigModel):
     project: ProjectConfig
+    runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
+    logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    cache: CachePathsConfig = Field(default_factory=CachePathsConfig)
+    run_naming: RunNamingConfig = Field(default_factory=RunNamingConfig)
+
+
+class ExperimentConfig(StrictConfigModel):
+    experiment: ExperimentMetadataConfig = Field(default_factory=ExperimentMetadataConfig)
+    project: ProjectConfig | None = None
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
     model: ModelConfig
     dataset: DatasetConfig
@@ -21,7 +56,16 @@ class ExperimentConfig(StrictConfigModel):
     inference: InferenceConfig = Field(default_factory=InferenceConfig)
     evaluation: EvaluationConfig = Field(default_factory=EvaluationConfig)
 
-    @field_validator("experiment_name")
+    @property
+    def experiment_name(self) -> str:
+        return self.experiment.name
+
+    @model_validator(mode="before")
     @classmethod
-    def validate_experiment_name(cls, value: str) -> str:
-        return ensure_non_empty(value)
+    def migrate_legacy_experiment_name(cls, data: object) -> object:
+        if not isinstance(data, dict) or "experiment_name" not in data:
+            return data
+        migrated = dict(data)
+        experiment_name = migrated.pop("experiment_name")
+        migrated.setdefault("experiment", {"name": experiment_name})
+        return migrated

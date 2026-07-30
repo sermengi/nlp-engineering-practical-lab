@@ -5,7 +5,8 @@ from typing import TypeVar
 import yaml
 
 from nlp_lab.core.config.common import PathLike, RawConfig, StrictConfigModel
-from nlp_lab.core.config.experiment import ExperimentConfig
+from nlp_lab.core.config.experiment import CommonConfig, ExperimentConfig
+from nlp_lab.core.config.runtime import ModalConfig
 
 ConfigModelT = TypeVar("ConfigModelT", bound=StrictConfigModel)
 
@@ -37,3 +38,11 @@ def load_config(path: PathLike, model_type: type[ConfigModelT]) -> ConfigModelT:
 
 def load_experiment_config(path: PathLike) -> ExperimentConfig:
     return load_config(path, ExperimentConfig)
+
+
+def load_common_config(path: PathLike) -> CommonConfig:
+    return load_config(path, CommonConfig)
+
+
+def load_modal_config(path: PathLike) -> ModalConfig:
+    return load_config(path, ModalConfig)

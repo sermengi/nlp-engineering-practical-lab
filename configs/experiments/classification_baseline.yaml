@@ -1,0 +1,39 @@
+experiment:
+  name: classification-baseline
+  task: text-classification
+  description: Pretrained text classification baseline
+
+model:
+  model_id: placeholder-model
+  revision: main
+  trust_remote_code: false
+  dtype: float32
+
+dataset:
+  dataset_id: placeholder-dataset
+  subset: null
+  split: test
+  text_column: text
+  label_column: label
+  max_samples: null
+
+preprocessing:
+  max_length: 256
+  truncation: true
+  padding: dynamic
+
+inference:
+  batch_size: 16
+  threshold: 0.5
+
+evaluation:
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1
+  averaging:
+    - macro
+    - weighted
+  save_predictions: true
+  save_errors: true

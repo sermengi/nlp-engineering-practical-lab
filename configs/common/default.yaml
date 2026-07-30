@@ -1,0 +1,21 @@
+project:
+  name: nlp-engineering-practical-lab
+
+runtime:
+  seed: 42
+  deterministic: false
+  output_root: outputs/experiments
+
+logging:
+  level: INFO
+  save_console_log: true
+
+cache:
+  root: .cache/nlp-lab
+  huggingface: .cache/huggingface
+  datasets: .cache/datasets
+  models: .cache/models
+
+run_naming:
+  strategy: timestamp
+  prefix: null

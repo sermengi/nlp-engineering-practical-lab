@@ -36,5 +36,49 @@ class ProjectConfig(StrictConfigModel):
         return ensure_non_empty(value)
 
 
+class LoggingConfig(StrictConfigModel):
+    level: str = "INFO"
+    save_console_log: bool = True
+
+    @field_validator("level")
+    @classmethod
+    def validate_level(cls, value: str) -> str:
+        normalized = ensure_non_empty(value).upper()
+        allowed_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        if normalized not in allowed_levels:
+            msg = f"logging level must be one of: {', '.join(sorted(allowed_levels))}"
+            raise ValueError(msg)
+        return normalized
+
+
+class CachePathsConfig(StrictConfigModel):
+    root: Path | None = None
+    huggingface: Path | None = None
+    datasets: Path | None = None
+    models: Path | None = None
+
+
+class RunNamingConfig(StrictConfigModel):
+    strategy: str = "timestamp"
+    prefix: str | None = None
+
+    @field_validator("strategy")
+    @classmethod
+    def validate_strategy(cls, value: str) -> str:
+        normalized = ensure_non_empty(value)
+        allowed_strategies = {"timestamp", "slug", "manual"}
+        if normalized not in allowed_strategies:
+            msg = f"run naming strategy must be one of: {', '.join(sorted(allowed_strategies))}"
+            raise ValueError(msg)
+        return normalized
+
+    @field_validator("prefix")
+    @classmethod
+    def validate_prefix(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return ensure_non_empty(value)
+
+
 PathLike = str | Path
 RawConfig = dict[str, Any]

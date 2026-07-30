@@ -7,9 +7,12 @@ from nlp_lab.core.config import (
     DatasetConfig,
     ExperimentConfig,
     InferenceConfig,
+    ModalConfig,
     ModelConfig,
     ProjectConfig,
+    load_common_config,
     load_experiment_config,
+    load_modal_config,
 )
 
 
@@ -25,8 +28,12 @@ def test_experiment_config_accepts_nested_dicts() -> None:
     )
 
     assert config.project == ProjectConfig(name="nlp-lab", config_version="1")
+    assert config.experiment.name == "sentiment-baseline"
+    assert config.experiment_name == "sentiment-baseline"
     assert config.runtime.seed == 42
     assert config.dataset.text_column == "text"
+    assert config.dataset.max_samples == 100
+    assert config.dataset.sample_limit == 100
     assert config.preprocessing.max_length == 512
     assert config.inference.device == "auto"
     assert config.evaluation.metrics == ["accuracy"]
@@ -68,6 +75,7 @@ evaluation:
   metrics:
     - accuracy
     - f1
+  average: weighted
 """.strip(),
         encoding="utf-8",
     )
@@ -78,3 +86,40 @@ evaluation:
     assert config.dataset.local_path == Path("data/raw/sample.csv")
     assert config.inference.batch_size == 4
     assert config.evaluation.metrics == ["accuracy", "f1"]
+    assert config.evaluation.averaging == ["weighted"]
+
+
+@pytest.mark.unit
+def test_load_common_default_config() -> None:
+    config = load_common_config("configs/common/default.yaml")
+
+    assert config.project.name == "nlp-engineering-practical-lab"
+    assert config.runtime.output_root == Path("outputs/experiments")
+    assert config.logging.level == "INFO"
+    assert config.cache.huggingface == Path(".cache/huggingface")
+    assert config.run_naming.strategy == "timestamp"
+
+
+@pytest.mark.unit
+def test_load_classification_baseline_experiment_config() -> None:
+    config = load_experiment_config("configs/experiments/classification_baseline.yaml")
+
+    assert config.experiment.name == "classification-baseline"
+    assert config.experiment.task == "text-classification"
+    assert config.model.model_id == "placeholder-model"
+    assert config.dataset.dataset_id == "placeholder-dataset"
+    assert config.dataset.max_samples is None
+    assert config.preprocessing.padding == "dynamic"
+    assert config.evaluation.averaging == ["macro", "weighted"]
+
+
+@pytest.mark.unit
+def test_load_modal_default_config() -> None:
+    config = load_modal_config("configs/modal/default.yaml")
+
+    assert isinstance(config, ModalConfig)
+    assert config.remote.provider == "modal"
+    assert config.remote.cpu == 2
+    assert config.remote.memory_mb == 4096
+    assert config.storage.volume_name == "nlp-lab-artifacts"
+    assert config.storage.remote_root == Path("/artifacts")

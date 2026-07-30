@@ -1,0 +1,11 @@
+remote:
+  provider: modal
+  gpu: null
+  cpu: 2
+  memory_mb: 4096
+  timeout_seconds: 900
+
+storage:
+  volume_name: nlp-lab-artifacts
+  remote_root: /artifacts
+  hf_cache: /cache/huggingface
