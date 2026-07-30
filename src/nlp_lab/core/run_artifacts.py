@@ -1,3 +1,4 @@
+import os
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -237,8 +238,10 @@ def mark_run_failed(
             "failed_at": failed_at or datetime.now().astimezone(),
             "exception_type": type(exception).__name__,
             "error_message": safe_error_message(exception),
-            "traceback_log": "".join(
-                traceback.format_exception(type(exception), exception, exception.__traceback__)
+            "traceback_log": redact_sensitive_text(
+                "".join(
+                    traceback.format_exception(type(exception), exception, exception.__traceback__)
+                )
             ),
         }
     )
@@ -250,7 +253,18 @@ def safe_error_message(exception: BaseException) -> str:
     message = str(exception)
     if not message:
         return type(exception).__name__
-    return message.replace("\n", " ").strip()
+    return redact_sensitive_text(message.replace("\n", " ").strip())
+
+
+def redact_sensitive_text(text: str) -> str:
+    redacted = text
+    for key, value in os.environ.items():
+        key_upper = key.upper()
+        if not value or len(value) < 4:
+            continue
+        if any(marker in key_upper for marker in ("TOKEN", "SECRET", "PASSWORD", "API_KEY")):
+            redacted = redacted.replace(value, "[REDACTED]")
+    return redacted
 
 
 def collect_environment_info(
