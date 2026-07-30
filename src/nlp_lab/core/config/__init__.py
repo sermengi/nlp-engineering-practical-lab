@@ -6,11 +6,14 @@ from nlp_lab.core.config.common import (
 )
 from nlp_lab.core.config.experiment import CommonConfig, ExperimentConfig, ExperimentMetadataConfig
 from nlp_lab.core.config.loader import (
+    ConfigOverrides,
     load_common_config,
     load_config,
     load_config_dict,
     load_experiment_config,
+    load_layered_experiment_config,
     load_modal_config,
+    merge_config_dicts,
 )
 from nlp_lab.core.config.runtime import (
     DatasetConfig,
@@ -27,6 +30,7 @@ from nlp_lab.core.config.runtime import (
 __all__ = [
     "CachePathsConfig",
     "CommonConfig",
+    "ConfigOverrides",
     "DatasetConfig",
     "EvaluationConfig",
     "ExperimentConfig",
@@ -45,5 +49,7 @@ __all__ = [
     "load_config",
     "load_config_dict",
     "load_experiment_config",
+    "load_layered_experiment_config",
     "load_modal_config",
+    "merge_config_dicts",
 ]

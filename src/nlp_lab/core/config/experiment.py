@@ -50,6 +50,9 @@ class ExperimentConfig(StrictConfigModel):
     experiment: ExperimentMetadataConfig = Field(default_factory=ExperimentMetadataConfig)
     project: ProjectConfig | None = None
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
+    logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    cache: CachePathsConfig = Field(default_factory=CachePathsConfig)
+    run_naming: RunNamingConfig = Field(default_factory=RunNamingConfig)
     model: ModelConfig
     dataset: DatasetConfig
     preprocessing: PreprocessingConfig = Field(default_factory=PreprocessingConfig)

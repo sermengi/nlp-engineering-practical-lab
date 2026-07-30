@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from nlp_lab.core.config import (
+    ConfigOverrides,
     DatasetConfig,
     ExperimentConfig,
     InferenceConfig,
@@ -12,6 +13,7 @@ from nlp_lab.core.config import (
     ProjectConfig,
     load_common_config,
     load_experiment_config,
+    load_layered_experiment_config,
     load_modal_config,
 )
 
@@ -123,3 +125,47 @@ def test_load_modal_default_config() -> None:
     assert config.remote.memory_mb == 4096
     assert config.storage.volume_name == "nlp-lab-artifacts"
     assert config.storage.remote_root == Path("/artifacts")
+
+
+@pytest.mark.unit
+def test_load_layered_experiment_config_merges_common_then_experiment_then_overrides() -> None:
+    config = load_layered_experiment_config(
+        "configs/common/default.yaml",
+        "configs/experiments/classification_baseline.yaml",
+        overrides={
+            "batch_size": 32,
+            "max_samples": 25,
+            "model_id": "override-model",
+            "dataset_split": "validation",
+            "threshold": 0.7,
+            "output_root": "outputs/overrides",
+            "seed": 7,
+        },
+    )
+
+    assert config.project == ProjectConfig(name="nlp-engineering-practical-lab")
+    assert config.logging.level == "INFO"
+    assert config.runtime.seed == 7
+    assert config.runtime.output_root == Path("outputs/overrides")
+    assert config.model.model_id == "override-model"
+    assert config.dataset.split == "validation"
+    assert config.dataset.max_samples == 25
+    assert config.inference.batch_size == 32
+    assert config.inference.threshold == 0.7
+    assert config.preprocessing.max_length == 256
+
+
+@pytest.mark.unit
+def test_load_layered_experiment_config_rejects_unsupported_override_fields() -> None:
+    with pytest.raises(ValidationError):
+        load_layered_experiment_config(
+            "configs/common/default.yaml",
+            "configs/experiments/classification_baseline.yaml",
+            overrides={"preprocessing": {"max_length": 128}},
+        )
+
+
+@pytest.mark.unit
+def test_config_overrides_require_supported_fields() -> None:
+    with pytest.raises(ValidationError):
+        ConfigOverrides()

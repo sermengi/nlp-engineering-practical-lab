@@ -97,6 +97,25 @@ make test-integration
 make test-smoke
 ```
 
+## Config Layers
+
+Experiment configs are resolved in three steps:
+
+1. `configs/common/default.yaml`
+2. `configs/experiments/<experiment>.yaml`
+3. optional command-line overrides
+
+Experiment files override common defaults by normal nested key merge. Command-line overrides are
+intentionally limited to frequently changed fields only:
+
+- `batch_size` -> `inference.batch_size`
+- `max_samples` -> `dataset.max_samples`
+- `model_id` -> `model.model_id`
+- `dataset_split` -> `dataset.split`
+- `threshold` -> `inference.threshold`
+- `output_root` -> `runtime.output_root`
+- `seed` -> `runtime.seed`
+
 ## Test Levels
 
 Unit tests live in `tests/unit` and must be fast, offline, CPU-only, and avoid model downloads.
