@@ -10,6 +10,7 @@ DevicePreference = Literal["auto", "cpu", "cuda", "mps"]
 PaddingStrategy = Literal["dynamic", "max_length", "longest", "do_not_pad"]
 AverageMethod = Literal["micro", "macro", "weighted", "binary", "samples"]
 CacheBehavior = Literal["use", "refresh", "disabled"]
+ModelDType = Literal["auto", "float32", "float16", "bfloat16"]
 
 
 def default_averaging() -> list[AverageMethod]:
@@ -22,11 +23,18 @@ class RuntimeConfig(StrictConfigModel):
     deterministic: bool = False
     environment: ExecutionEnvironment = "local"
 
+    @field_validator("output_root", mode="before")
+    @classmethod
+    def validate_output_root(cls, value: object) -> object:
+        if isinstance(value, str):
+            ensure_non_empty(value)
+        return value
+
 
 class ModelConfig(StrictConfigModel):
     model_id: str
     revision: str | None = None
-    dtype: str | None = None
+    dtype: ModelDType | None = None
     trust_remote_code: bool = False
     cache_behavior: CacheBehavior = "use"
 
@@ -63,6 +71,9 @@ class DatasetConfig(StrictConfigModel):
         if self.dataset_id is None and self.local_path is None:
             msg = "either dataset_id or local_path must be provided"
             raise ValueError(msg)
+        if self.dataset_id is not None and self.local_path is not None:
+            msg = "dataset_id and local_path cannot both be provided"
+            raise ValueError(msg)
         return self
 
     @property
@@ -89,6 +100,13 @@ class DatasetConfig(StrictConfigModel):
         if value is None:
             return None
         return ensure_non_empty(value)
+
+    @field_validator("local_path", mode="before")
+    @classmethod
+    def validate_local_path(cls, value: object) -> object:
+        if isinstance(value, str):
+            ensure_non_empty(value)
+        return value
 
 
 class PreprocessingConfig(StrictConfigModel):

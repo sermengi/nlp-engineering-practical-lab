@@ -19,10 +19,12 @@ from nlp_lab.core.config.runtime import (
     RuntimeConfig,
 )
 
+TaskName = Literal["text-classification"]
+
 
 class ExperimentMetadataConfig(StrictConfigModel):
     name: str = "default"
-    task: Literal["text-classification"] | str = "text-classification"
+    task: TaskName = "text-classification"
     description: str | None = None
 
     @field_validator("name", "task")
@@ -72,3 +74,11 @@ class ExperimentConfig(StrictConfigModel):
         experiment_name = migrated.pop("experiment_name")
         migrated.setdefault("experiment", {"name": experiment_name})
         return migrated
+
+    @model_validator(mode="after")
+    def validate_task_contract(self) -> "ExperimentConfig":
+        if self.experiment.task == "text-classification":
+            if self.dataset.text_column is None or self.dataset.label_column is None:
+                msg = "text-classification requires text_column and label_column"
+                raise ValueError(msg)
+        return self

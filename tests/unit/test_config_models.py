@@ -10,7 +10,9 @@ from nlp_lab.core.config import (
     InferenceConfig,
     ModalConfig,
     ModelConfig,
+    PreprocessingConfig,
     ProjectConfig,
+    RuntimeConfig,
     load_common_config,
     load_experiment_config,
     load_layered_experiment_config,
@@ -57,6 +59,70 @@ def test_dataset_config_requires_dataset_id_or_local_path() -> None:
 def test_inference_threshold_is_bounded() -> None:
     with pytest.raises(ValidationError):
         InferenceConfig(threshold=1.1)
+
+
+@pytest.mark.unit
+def test_inference_batch_size_must_be_positive() -> None:
+    with pytest.raises(ValidationError):
+        InferenceConfig(batch_size=0)
+
+
+@pytest.mark.unit
+def test_preprocessing_max_length_must_be_positive() -> None:
+    with pytest.raises(ValidationError):
+        PreprocessingConfig(max_length=0)
+
+
+@pytest.mark.unit
+def test_dataset_max_samples_must_be_positive_when_set() -> None:
+    with pytest.raises(ValidationError):
+        DatasetConfig(dataset_id="imdb", max_samples=0)
+
+
+@pytest.mark.unit
+def test_dataset_config_rejects_dataset_id_and_local_path_together() -> None:
+    with pytest.raises(ValidationError, match="cannot both be provided"):
+        DatasetConfig(dataset_id="imdb", local_path="data/raw/sample.csv")
+
+
+@pytest.mark.unit
+def test_runtime_output_root_must_not_be_empty() -> None:
+    with pytest.raises(ValidationError, match="must not be empty"):
+        RuntimeConfig(output_root=" ")
+
+
+@pytest.mark.unit
+def test_model_dtype_must_be_supported() -> None:
+    with pytest.raises(ValidationError):
+        ModelConfig(model_id="bert-base-uncased", dtype="int8")
+
+
+@pytest.mark.unit
+def test_experiment_task_must_be_supported() -> None:
+    with pytest.raises(ValidationError):
+        ExperimentConfig.model_validate(
+            {
+                "experiment": {"name": "ner", "task": "token-classification"},
+                "model": {"model_id": "bert-base-uncased"},
+                "dataset": {"dataset_id": "conll2003"},
+            }
+        )
+
+
+@pytest.mark.unit
+def test_text_classification_requires_label_column() -> None:
+    with pytest.raises(ValidationError, match="requires text_column and label_column"):
+        ExperimentConfig.model_validate(
+            {
+                "experiment": {"name": "classification", "task": "text-classification"},
+                "model": {"model_id": "bert-base-uncased"},
+                "dataset": {
+                    "dataset_id": "imdb",
+                    "text_column": "text",
+                    "label_column": None,
+                },
+            }
+        )
 
 
 @pytest.mark.unit
