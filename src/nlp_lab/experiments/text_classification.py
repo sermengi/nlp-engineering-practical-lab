@@ -1,76 +1,109 @@
 import csv
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
 from typing import Any
 
 from nlp_lab.core.artifacts import write_json
 from nlp_lab.core.experiment_result import ExperimentArtifact, ExperimentResult
+from nlp_lab.core.observability import StageTimer, wrap_stage_error
 from nlp_lab.core.run_artifacts import ErrorRecord, PredictionRecord, RuntimeMeasurements
 from nlp_lab.core.run_context import RunContext
 from nlp_lab.models import LoadedSequenceClassifier, load_sequence_classifier
 
 
+@dataclass(frozen=True)
+class InferenceOutput:
+    predictions: list[PredictionRecord]
+    batch_latencies_seconds: list[float]
+
+
 def hf_text_classification_experiment(context: RunContext) -> ExperimentResult:
     torch = load_torch()
+    timer = StageTimer()
 
     config = context.config
-    samples = load_text_classification_samples(
-        config.dataset.local_path,
-        text_column=config.dataset.text_column,
-        label_column=config.dataset.label_column,
-        max_samples=config.dataset.max_samples,
-    )
+    try:
+        with timer.measure("data_loading"):
+            samples = load_text_classification_samples(
+                config.dataset.local_path,
+                text_column=config.dataset.text_column,
+                label_column=config.dataset.label_column,
+                max_samples=config.dataset.max_samples,
+            )
+    except Exception as exc:
+        raise wrap_stage_error("data_loading", "data_error", exc) from exc
     true_labels = [sample["label"] for sample in samples]
 
-    model_started = perf_counter()
-    loaded = load_sequence_classifier(config)
-    model_load_seconds = perf_counter() - model_started
+    try:
+        with timer.measure("model_loading"):
+            loaded = load_sequence_classifier(config)
+    except Exception as exc:
+        raise wrap_stage_error("model_loading", "model_loading_error", exc) from exc
 
-    inference_started = perf_counter()
-    predictions = run_inference(
-        loaded,
-        samples,
-        batch_size=config.inference.batch_size,
-        max_length=config.preprocessing.max_length,
-        truncation=config.preprocessing.truncation,
-        padding=config.preprocessing.padding,
-        torch=torch,
-    )
-    predicted_labels = [str(prediction.predicted_label) for prediction in predictions]
-    inference_seconds = perf_counter() - inference_started
-
-    evaluation_started = perf_counter()
-    metrics = compute_classification_metrics(true_labels, predicted_labels)
-    confusion_matrix = compute_confusion_matrix(true_labels, predicted_labels)
-    errors = [
-        ErrorRecord(
-            sample_id=prediction.sample_id,
-            true_label=prediction.true_label,
-            predicted_label=prediction.predicted_label,
-            confidence=prediction.confidence,
-            error_type="misclassification",
+    try:
+        inference_output = run_inference(
+            loaded,
+            samples,
+            batch_size=config.inference.batch_size,
+            max_length=config.preprocessing.max_length,
+            truncation=config.preprocessing.truncation,
+            padding=config.preprocessing.padding,
+            torch=torch,
+            timer=timer,
         )
-        for prediction in predictions
-        if prediction.is_correct is False
-    ]
-    evaluation_seconds = perf_counter() - evaluation_started
-    total_duration_seconds = model_load_seconds + inference_seconds + evaluation_seconds
-    artifacts = write_metadata_artifacts(
-        context,
-        loaded,
-        sample_count=len(samples),
-        confusion_matrix=confusion_matrix,
+    except Exception as exc:
+        raise wrap_stage_error("inference", "inference_error", exc) from exc
+    predictions = inference_output.predictions
+    predicted_labels = [str(prediction.predicted_label) for prediction in predictions]
+
+    try:
+        with timer.measure("evaluation"):
+            metrics = compute_classification_metrics(true_labels, predicted_labels)
+            confusion_matrix = compute_confusion_matrix(true_labels, predicted_labels)
+            errors = [
+                ErrorRecord(
+                    sample_id=prediction.sample_id,
+                    true_label=prediction.true_label,
+                    predicted_label=prediction.predicted_label,
+                    confidence=prediction.confidence,
+                    error_type="misclassification",
+                )
+                for prediction in predictions
+                if prediction.is_correct is False
+            ]
+    except Exception as exc:
+        raise wrap_stage_error("evaluation", "evaluation_error", exc) from exc
+    try:
+        artifacts = write_metadata_artifacts(
+            context,
+            loaded,
+            sample_count=len(samples),
+            confusion_matrix=confusion_matrix,
+        )
+    except Exception as exc:
+        raise wrap_stage_error("artifact_writing", "artifact_writing_error", exc) from exc
+
+    inference_seconds = timer.stage_seconds.get("inference", 0.0)
+    batch_count = len(inference_output.batch_latencies_seconds)
+    average_batch_latency = (
+        sum(inference_output.batch_latencies_seconds) / batch_count if batch_count else None
     )
 
     return ExperimentResult(
         metrics=metrics,
         runtime=RuntimeMeasurements(
-            total_duration_seconds=total_duration_seconds,
-            model_load_seconds=model_load_seconds,
+            total_duration_seconds=timer.total_duration_seconds,
+            data_loading_seconds=timer.stage_seconds.get("data_loading"),
+            model_load_seconds=timer.stage_seconds.get("model_loading"),
+            preprocessing_seconds=timer.stage_seconds.get("preprocessing"),
             inference_seconds=inference_seconds,
-            evaluation_seconds=evaluation_seconds,
+            evaluation_seconds=timer.stage_seconds.get("evaluation"),
+            sample_count=len(samples),
+            batch_count=batch_count,
             samples_per_second=len(samples) / inference_seconds if inference_seconds > 0 else None,
+            average_batch_latency_seconds=average_batch_latency,
             batch_size=config.inference.batch_size,
         ),
         predictions=predictions if config.evaluation.save_predictions else [],
@@ -163,9 +196,12 @@ def run_inference(
     truncation: bool,
     padding: str,
     torch: Any,
-) -> list[PredictionRecord]:
+    timer: StageTimer | None = None,
+) -> InferenceOutput:
     predictions: list[PredictionRecord] = []
+    batch_latencies: list[float] = []
     for batch_samples in iter_batches(samples, batch_size):
+        preprocess_started = perf_counter()
         encoded = tokenize_batch(
             loaded.tokenizer,
             batch_samples,
@@ -173,10 +209,17 @@ def run_inference(
             truncation=truncation,
             padding=padding,
         )
+        if timer is not None:
+            timer.record("preprocessing", perf_counter() - preprocess_started)
         encoded = {key: value.to(loaded.device) for key, value in encoded.items()}
+        batch_started = perf_counter()
         with torch.inference_mode():
             outputs = loaded.model(**encoded)
             probabilities = torch.softmax(outputs.logits, dim=-1)
+        batch_latency = perf_counter() - batch_started
+        batch_latencies.append(batch_latency)
+        if timer is not None:
+            timer.record("inference", batch_latency)
         batch_confidences, batch_label_ids = torch.max(probabilities, dim=-1)
 
         for offset, sample in enumerate(batch_samples):
@@ -193,7 +236,7 @@ def run_inference(
                     is_correct=normalize_label(predicted_label) == normalize_label(true_label),
                 )
             )
-    return predictions
+    return InferenceOutput(predictions=predictions, batch_latencies_seconds=batch_latencies)
 
 
 def iter_batches(

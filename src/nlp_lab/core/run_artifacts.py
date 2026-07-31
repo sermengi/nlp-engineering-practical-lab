@@ -1,4 +1,3 @@
-import os
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -54,6 +53,7 @@ from nlp_lab.core.config import ExperimentConfig, generate_run_id
 from nlp_lab.core.config.common import StrictConfigModel, ensure_non_empty
 from nlp_lab.core.environment import EnvironmentInfo
 from nlp_lab.core.environment import collect_environment_info as collect_environment
+from nlp_lab.core.observability import categorize_exception
 
 if TYPE_CHECKING:
     from nlp_lab.core.experiment_result import ExperimentResult
@@ -76,14 +76,28 @@ class RunMetadata(StrictConfigModel):
     exception_type: str | None = None
     error_message: str | None = None
     traceback_log: str | None = None
+    error_stage: str | None = None
+    error_category: str | None = None
 
 
 class RuntimeMeasurements(StrictConfigModel):
     total_duration_seconds: float | None = Field(default=None, ge=0.0)
+    config_loading_seconds: float | None = Field(default=None, ge=0.0)
+    data_loading_seconds: float | None = Field(default=None, ge=0.0)
     model_load_seconds: float | None = Field(default=None, ge=0.0)
+    preprocessing_seconds: float | None = Field(default=None, ge=0.0)
     inference_seconds: float | None = Field(default=None, ge=0.0)
     evaluation_seconds: float | None = Field(default=None, ge=0.0)
+    artifact_writing_seconds: float | None = Field(default=None, ge=0.0)
+    sample_count: int | None = Field(default=None, ge=0)
+    batch_count: int | None = Field(default=None, ge=0)
     samples_per_second: float | None = Field(default=None, ge=0.0)
+    average_batch_latency_seconds: float | None = Field(default=None, ge=0.0)
+    process_peak_memory_mb: float | None = Field(default=None, ge=0.0)
+    process_current_memory_mb: float | None = Field(default=None, ge=0.0)
+    cuda_peak_allocated_mb: float | None = Field(default=None, ge=0.0)
+    cuda_peak_reserved_mb: float | None = Field(default=None, ge=0.0)
+    memory_device: str | None = None
     batch_size: int = Field(..., gt=0)
 
 
@@ -233,6 +247,7 @@ def mark_run_failed(
     exception: BaseException,
     failed_at: datetime | None = None,
 ) -> RunMetadata:
+    error_stage, error_category = categorize_exception(exception, "experiment")
     failed = metadata_.model_copy(
         update={
             "status": "FAILED",
@@ -244,10 +259,37 @@ def mark_run_failed(
                     traceback.format_exception(type(exception), exception, exception.__traceback__)
                 )
             ),
+            "error_stage": error_stage,
+            "error_category": error_category,
         }
     )
     write_run_metadata(path, failed)
     return failed
+
+
+def mark_run_interrupted(
+    path: Path,
+    metadata_: RunMetadata,
+    exception: BaseException,
+    interrupted_at: datetime | None = None,
+) -> RunMetadata:
+    interrupted = metadata_.model_copy(
+        update={
+            "status": "INTERRUPTED",
+            "failed_at": interrupted_at or datetime.now().astimezone(),
+            "exception_type": type(exception).__name__,
+            "error_message": safe_error_message(exception),
+            "traceback_log": redact_sensitive_text(
+                "".join(
+                    traceback.format_exception(type(exception), exception, exception.__traceback__)
+                )
+            ),
+            "error_stage": getattr(exception, "stage", "experiment"),
+            "error_category": "interrupted",
+        }
+    )
+    write_run_metadata(path, interrupted)
+    return interrupted
 
 
 def safe_error_message(exception: BaseException) -> str:
@@ -258,14 +300,9 @@ def safe_error_message(exception: BaseException) -> str:
 
 
 def redact_sensitive_text(text: str) -> str:
-    redacted = text
-    for key, value in os.environ.items():
-        key_upper = key.upper()
-        if not value or len(value) < 4:
-            continue
-        if any(marker in key_upper for marker in ("TOKEN", "SECRET", "PASSWORD", "API_KEY")):
-            redacted = redacted.replace(value, "[REDACTED]")
-    return redacted
+    from nlp_lab.core.observability import redact_sensitive_text as redact
+
+    return redact(text)
 
 
 def collect_environment_info(

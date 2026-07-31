@@ -31,7 +31,10 @@ def successful_dummy_experiment(context: RunContext) -> ExperimentResult:
         runtime=RuntimeMeasurements(
             total_duration_seconds=duration,
             inference_seconds=duration,
+            sample_count=bounded_sample_count,
+            batch_count=1,
             samples_per_second=bounded_sample_count / duration if duration > 0 else None,
+            average_batch_latency_seconds=duration,
             batch_size=context.config.inference.batch_size,
         ),
         predictions=predictions if context.config.evaluation.save_predictions else [],

@@ -3,6 +3,7 @@ from datetime import datetime
 from nlp_lab.core.artifacts.paths import RunArtifactPaths, build_run_artifact_paths
 from nlp_lab.core.config import ExperimentConfig, generate_run_id
 from nlp_lab.core.experiment_result import ExperimentResult
+from nlp_lab.core.observability import log_run_event
 from nlp_lab.core.run_artifacts import (
     ExecutionMode,
     RunMetadata,
@@ -10,10 +11,12 @@ from nlp_lab.core.run_artifacts import (
     collect_environment_info,
     mark_run_completed,
     mark_run_failed,
+    mark_run_interrupted,
     write_environment,
     write_experiment_result,
     write_resolved_config,
     write_run_metadata,
+    write_runtime,
 )
 
 
@@ -60,6 +63,9 @@ class LocalFilesystemArtifactWriter:
     def write_result(self, paths: RunArtifactPaths, result: ExperimentResult) -> None:
         write_experiment_result(paths, result)
 
+    def write_runtime(self, paths: RunArtifactPaths, result: ExperimentResult) -> None:
+        write_runtime(paths.runtime, result.runtime)
+
     def complete_run(
         self,
         paths: RunArtifactPaths,
@@ -76,6 +82,38 @@ class LocalFilesystemArtifactWriter:
         failed_at: datetime | None = None,
     ) -> RunMetadata:
         return mark_run_failed(paths.run_metadata, metadata, exception, failed_at)
+
+    def interrupt_run(
+        self,
+        paths: RunArtifactPaths,
+        metadata: RunMetadata,
+        exception: BaseException,
+        interrupted_at: datetime | None = None,
+    ) -> RunMetadata:
+        return mark_run_interrupted(paths.run_metadata, metadata, exception, interrupted_at)
+
+    def log_event(
+        self,
+        paths: RunArtifactPaths,
+        metadata: RunMetadata,
+        *,
+        stage: str,
+        level: str,
+        message: str,
+        extra: dict[str, object] | None = None,
+    ) -> None:
+        log_run_event(
+            path=paths.console_log,
+            run_id=metadata.run_id,
+            experiment_name=metadata.experiment_name,
+            execution_mode=metadata.execution_mode,
+            stage=stage,
+            level=level,
+            message=message,
+            extra=extra,
+            emit_console=True,
+            save_file=True,
+        )
 
 
 def build_local_artifact_writer() -> LocalFilesystemArtifactWriter:
