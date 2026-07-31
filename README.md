@@ -103,6 +103,26 @@ Run the local Hugging Face smoke experiment:
 make local-smoke
 ```
 
+Preview the end-to-end acceptance flow without running network or Modal work:
+
+```bash
+make acceptance-plan
+```
+
+Run the full local and Modal infrastructure acceptance flow:
+
+```bash
+make acceptance-test
+```
+
+The acceptance flow performs dependency sync, lint, format check, type check, unit tests, a local
+classification smoke run, an intentional local failed run, two Modal CPU classification runs, an
+optional Modal GPU run, Volume artifact export, cache timing inspection, and local/remote parity
+comparison. It writes `outputs/reports/acceptance.json` and
+`outputs/reports/acceptance-parity.json`. Use `uv run nlp-lab acceptance-test --skip-gpu` when GPU
+quota is not available, or `uv run nlp-lab acceptance-test --skip-remote` for a local-only
+acceptance pass.
+
 Run Modal launchers from the repository root:
 
 ```bash
@@ -146,6 +166,20 @@ List or download artifacts with Modal's Volume CLI:
 uv run --group remote modal volume ls nlp-lab-storage /experiments
 uv run --group remote modal volume get nlp-lab-storage /experiments/<run-id> outputs/modal-downloads/<run-id>
 ```
+
+Compare a local run with a downloaded remote run:
+
+```bash
+uv run nlp-lab compare-runs \
+  --local-run-dir outputs/experiments/local-smoke/<local-run-id> \
+  --remote-run-dir outputs/modal-downloads/<remote-run-id> \
+  --report outputs/reports/local-remote-parity.json
+```
+
+The strict parity check should use runs created from the same resolved experiment config. The
+Modal GPU smoke config intentionally differs by requesting `inference.device: cuda`, so the
+acceptance command compares the local run against the second Modal CPU run and records the GPU run
+separately for CUDA and device metadata verification.
 
 For a cache-hit check, run the same classification command twice and compare `model_load_seconds`
 in each run's `runtime.json`. The Modal runner overrides experiment cache paths so Hugging Face,

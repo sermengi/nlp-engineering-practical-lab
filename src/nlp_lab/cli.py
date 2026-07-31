@@ -2,6 +2,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from nlp_lab.acceptance import AcceptanceOptions, build_acceptance_plan, run_acceptance
 from nlp_lab.core.config import ConfigOverrides
 from nlp_lab.core.parity import compare_run_parity, write_parity_report
 from nlp_lab.experiments.local import run_local_experiment
@@ -54,6 +55,51 @@ def build_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument("--confidence-tolerance", type=float, default=1e-4)
     compare_parser.add_argument("--report", type=Path, default=None)
     compare_parser.set_defaults(handler=compare_runs_command)
+
+    acceptance_parser = subparsers.add_parser(
+        "acceptance-test",
+        help="Run the end-to-end local and Modal infrastructure acceptance flow.",
+    )
+    acceptance_parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/experiments/local_smoke_tiny_sst2.yaml"),
+    )
+    acceptance_parser.add_argument(
+        "--gpu-config",
+        type=Path,
+        default=Path("configs/experiments/modal_smoke_tiny_sst2_gpu.yaml"),
+    )
+    acceptance_parser.add_argument(
+        "--local-output-root",
+        type=Path,
+        default=Path("outputs/experiments/acceptance/local"),
+    )
+    acceptance_parser.add_argument(
+        "--failed-output-root",
+        type=Path,
+        default=Path("outputs/experiments/acceptance/failed"),
+    )
+    acceptance_parser.add_argument(
+        "--remote-download-root",
+        type=Path,
+        default=Path("outputs/modal-downloads"),
+    )
+    acceptance_parser.add_argument(
+        "--report",
+        type=Path,
+        default=Path("outputs/reports/acceptance.json"),
+    )
+    acceptance_parser.add_argument(
+        "--parity-report",
+        type=Path,
+        default=Path("outputs/reports/acceptance-parity.json"),
+    )
+    acceptance_parser.add_argument("--skip-clean-checks", action="store_true")
+    acceptance_parser.add_argument("--skip-remote", action="store_true")
+    acceptance_parser.add_argument("--skip-gpu", action="store_true")
+    acceptance_parser.add_argument("--dry-run", action="store_true")
+    acceptance_parser.set_defaults(handler=acceptance_test_command)
     return parser
 
 
@@ -114,6 +160,34 @@ def compare_runs_command(args: argparse.Namespace) -> int:
         print(f"- {check.name}: {check.status}")
     if args.report is not None:
         print(f"Parity report: {args.report}")
+    return SUCCESS_EXIT_CODE if report.passed else EXPERIMENT_FAILURE_EXIT_CODE
+
+
+def acceptance_test_command(args: argparse.Namespace) -> int:
+    options = AcceptanceOptions(
+        config=args.config,
+        gpu_config=args.gpu_config,
+        local_output_root=args.local_output_root,
+        failed_output_root=args.failed_output_root,
+        remote_download_root=args.remote_download_root,
+        report_path=args.report,
+        parity_report_path=args.parity_report,
+        run_clean_checks=not args.skip_clean_checks,
+        run_remote=not args.skip_remote,
+        run_gpu=not args.skip_gpu,
+        dry_run=args.dry_run,
+    )
+    if args.dry_run:
+        print("Acceptance test plan:")
+        for step in build_acceptance_plan(options):
+            print(f"- {step.name}: {' '.join(step.command)}")
+    report = run_acceptance(options)
+    print(f"Acceptance status: {report.status}")
+    print(f"Acceptance report: {args.report}")
+    if report.parity_report_path is not None:
+        print(f"Parity report: {report.parity_report_path}")
+    if report.status == "SKIPPED":
+        return SUCCESS_EXIT_CODE
     return SUCCESS_EXIT_CODE if report.passed else EXPERIMENT_FAILURE_EXIT_CODE
 
 

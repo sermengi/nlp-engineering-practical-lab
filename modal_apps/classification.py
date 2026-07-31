@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 CPU_SMOKE_CONFIG = "configs/experiments/local_smoke_tiny_sst2.yaml"
@@ -121,4 +122,4 @@ def main(
         max_samples=optional_positive_int(max_samples),
         batch_size=optional_positive_int(batch_size),
     )
-    print(summary)
+    print(json.dumps(summary, sort_keys=True))

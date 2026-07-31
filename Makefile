@@ -2,8 +2,10 @@ LOCAL_SMOKE_OUTPUT_ROOT ?= outputs/experiments/local-smoke
 LOCAL_PARITY_RUN_DIR ?=
 REMOTE_PARITY_RUN_DIR ?=
 PARITY_REPORT ?= outputs/reports/local-remote-parity.json
+ACCEPTANCE_REPORT ?= outputs/reports/acceptance.json
+ACCEPTANCE_PARITY_REPORT ?= outputs/reports/acceptance-parity.json
 
-.PHONY: sync sync-all test test-unit test-integration test-smoke local-smoke compare-local-remote lint format format-check typecheck check
+.PHONY: sync sync-all test test-unit test-integration test-smoke local-smoke compare-local-remote acceptance-plan acceptance-test lint format format-check typecheck check
 
 sync:
 	uv sync
@@ -28,6 +30,12 @@ local-smoke:
 
 compare-local-remote:
 	uv run nlp-lab compare-runs --local-run-dir $(LOCAL_PARITY_RUN_DIR) --remote-run-dir $(REMOTE_PARITY_RUN_DIR) --report $(PARITY_REPORT)
+
+acceptance-plan:
+	uv run nlp-lab acceptance-test --dry-run --report $(ACCEPTANCE_REPORT) --parity-report $(ACCEPTANCE_PARITY_REPORT)
+
+acceptance-test:
+	uv run nlp-lab acceptance-test --report $(ACCEPTANCE_REPORT) --parity-report $(ACCEPTANCE_PARITY_REPORT)
 
 lint:
 	uv run --group development ruff check .

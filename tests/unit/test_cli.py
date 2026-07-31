@@ -162,3 +162,33 @@ def test_cli_compare_runs_returns_two_when_artifacts_cannot_be_read(
 
     assert exit_code == 2
     assert "Run parity comparison failed" in stderr
+
+
+@pytest.mark.unit
+def test_cli_acceptance_test_dry_run_writes_report(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    report_path = tmp_path / "acceptance.json"
+    parity_report_path = tmp_path / "parity.json"
+
+    exit_code = main(
+        [
+            "acceptance-test",
+            "--dry-run",
+            "--skip-clean-checks",
+            "--skip-remote",
+            "--report",
+            str(report_path),
+            "--parity-report",
+            str(parity_report_path),
+        ]
+    )
+
+    stdout = capsys.readouterr().out
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert exit_code == 0
+    assert "Acceptance test plan:" in stdout
+    assert "Acceptance status: SKIPPED" in stdout
+    assert report["status"] == "SKIPPED"
