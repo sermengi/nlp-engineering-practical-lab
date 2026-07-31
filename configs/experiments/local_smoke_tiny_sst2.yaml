@@ -1,0 +1,38 @@
+experiment:
+  name: local-smoke-tiny-sst2
+  task: text-classification
+  description: Local CPU smoke test with a tiny public Hugging Face classifier
+
+model:
+  model_id: peft-internal-testing/tiny-random-BertForSequenceClassification
+  revision: main
+  trust_remote_code: false
+  dtype: float32
+
+dataset:
+  local_path: data/raw/smoke_sst2.csv
+  split: test
+  text_column: text
+  label_column: label
+  max_samples: 4
+
+preprocessing:
+  max_length: 64
+  truncation: true
+  padding: dynamic
+
+inference:
+  batch_size: 2
+  threshold: 0.5
+  device: cpu
+
+evaluation:
+  metrics:
+    - accuracy
+    - macro_precision
+    - macro_recall
+    - macro_f1
+  averaging:
+    - macro
+  save_predictions: true
+  save_errors: true

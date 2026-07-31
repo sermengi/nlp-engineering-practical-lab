@@ -171,6 +171,7 @@ datasets_cache/
 /data/interim/**
 /data/processed/**
 !/data/raw/.gitkeep
+!/data/raw/smoke_sst2.csv
 !/data/interim/.gitkeep
 !/data/processed/.gitkeep
 

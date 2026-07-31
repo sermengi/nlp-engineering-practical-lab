@@ -11,6 +11,7 @@ from nlp_lab.experiments.runner import (
     ExperimentRunFailedError,
     ExperimentRunner,
 )
+from nlp_lab.experiments.text_classification import hf_text_classification_experiment
 
 __all__ = [
     "CONFIG_VALIDATION_EXIT_CODE",
@@ -21,6 +22,7 @@ __all__ = [
     "ExperimentRunFailedError",
     "ExperimentRunner",
     "failing_dummy_experiment",
+    "hf_text_classification_experiment",
     "run_local_experiment",
     "successful_dummy_experiment",
 ]

@@ -1,0 +1,5 @@
+sample_id,text,label
+smoke-001,"I loved the clear writing and steady pacing.",POSITIVE
+smoke-002,"The movie was dull and painfully predictable.",NEGATIVE
+smoke-003,"A compact and pleasant story.",POSITIVE
+smoke-004,"The ending felt weak and unsatisfying.",NEGATIVE

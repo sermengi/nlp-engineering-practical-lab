@@ -30,9 +30,15 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--batch-size", type=int, default=None)
     run_parser.add_argument("--output-root", type=Path, default=None)
     run_parser.add_argument(
+        "--experiment",
+        choices=("dummy-success", "dummy-failure", "hf-text-classification"),
+        default="dummy-success",
+        help="Local experiment implementation to run.",
+    )
+    run_parser.add_argument(
         "--dummy-experiment",
         choices=("success", "failure"),
-        default="success",
+        default=None,
         help="Temporary local experiment implementation.",
     )
     run_parser.set_defaults(handler=run_command)
@@ -46,6 +52,7 @@ def run_command(args: argparse.Namespace) -> int:
             experiment_config_path=args.config,
             common_config_path=args.common_config,
             overrides=overrides,
+            experiment=args.experiment,
             dummy_experiment=args.dummy_experiment,
         )
     except ExperimentRunFailedError as exc:
