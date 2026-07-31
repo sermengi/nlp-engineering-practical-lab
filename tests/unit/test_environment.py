@@ -22,6 +22,13 @@ def test_collect_environment_info_returns_safe_reproducibility_metadata(
     monkeypatch.setenv("MODAL_REGION", "us-east-1")
     monkeypatch.setenv("MODAL_ENVIRONMENT", "main")
     monkeypatch.setenv("MODAL_IS_REMOTE", "1")
+    monkeypatch.setenv("NLP_LAB_STORAGE_ROOT", "/storage")
+    monkeypatch.setenv("HF_HOME", "/storage/cache/huggingface")
+    monkeypatch.setenv("HF_HUB_CACHE", "/storage/cache/huggingface/hub")
+    monkeypatch.setenv("HUGGINGFACE_HUB_CACHE", "/storage/cache/huggingface/hub")
+    monkeypatch.setenv("HF_DATASETS_CACHE", "/storage/cache/datasets")
+    monkeypatch.setenv("TRANSFORMERS_CACHE", "/storage/cache/transformers")
+    monkeypatch.setenv("TORCH_HOME", "/storage/cache/torch")
 
     environment = collect_environment_info(execution_mode="modal")
     payload = environment.model_dump(mode="json")
@@ -42,6 +49,13 @@ def test_collect_environment_info_returns_safe_reproducibility_metadata(
         "region": "us-east-1",
         "environment_name": "main",
         "is_remote": True,
+        "storage_root": "/storage",
+        "hf_home": "/storage/cache/huggingface",
+        "hf_hub_cache": "/storage/cache/huggingface/hub",
+        "huggingface_hub_cache": "/storage/cache/huggingface/hub",
+        "hf_datasets_cache": "/storage/cache/datasets",
+        "transformers_cache": "/storage/cache/transformers",
+        "torch_home": "/storage/cache/torch",
     }
     assert "environment_variables" not in payload
     assert "pip_freeze" not in payload

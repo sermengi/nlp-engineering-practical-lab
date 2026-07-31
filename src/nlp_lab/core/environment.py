@@ -53,6 +53,13 @@ class ModalRuntimeInfo(StrictConfigModel):
     region: str | None = None
     environment_name: str | None = None
     is_remote: bool = False
+    storage_root: str | None = None
+    hf_home: str | None = None
+    hf_hub_cache: str | None = None
+    huggingface_hub_cache: str | None = None
+    hf_datasets_cache: str | None = None
+    transformers_cache: str | None = None
+    torch_home: str | None = None
 
 
 class EnvironmentInfo(StrictConfigModel):
@@ -142,6 +149,13 @@ def collect_modal_runtime_info() -> ModalRuntimeInfo:
         region=os.environ.get("MODAL_REGION"),
         environment_name=os.environ.get("MODAL_ENVIRONMENT"),
         is_remote=os.environ.get("MODAL_IS_REMOTE") == "1",
+        storage_root=os.environ.get("NLP_LAB_STORAGE_ROOT"),
+        hf_home=os.environ.get("HF_HOME"),
+        hf_hub_cache=os.environ.get("HF_HUB_CACHE"),
+        huggingface_hub_cache=os.environ.get("HUGGINGFACE_HUB_CACHE"),
+        hf_datasets_cache=os.environ.get("HF_DATASETS_CACHE"),
+        transformers_cache=os.environ.get("TRANSFORMERS_CACHE"),
+        torch_home=os.environ.get("TORCH_HOME"),
     )
 
 

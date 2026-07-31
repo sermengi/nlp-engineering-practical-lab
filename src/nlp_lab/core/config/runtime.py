@@ -167,8 +167,14 @@ class RemoteConfig(StrictConfigModel):
 
 class RemoteStorageConfig(StrictConfigModel):
     volume_name: str
-    remote_root: Path = Path("/artifacts")
-    hf_cache: Path = Path("/cache/huggingface")
+    remote_root: Path = Path("/storage")
+    experiments_root: Path = Path("/storage/experiments")
+    checkpoints_root: Path = Path("/storage/checkpoints")
+    models_root: Path = Path("/storage/models")
+    hf_cache: Path = Path("/storage/cache/huggingface")
+    datasets_cache: Path = Path("/storage/cache/datasets")
+    transformers_cache: Path = Path("/storage/cache/transformers")
+    torch_cache: Path = Path("/storage/cache/torch")
 
     @field_validator("volume_name")
     @classmethod

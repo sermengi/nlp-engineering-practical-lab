@@ -20,6 +20,9 @@ class ConfigOverrides(StrictConfigModel):
     threshold: float | None = Field(default=None, ge=0.0, le=1.0)
     output_root: Path | None = None
     seed: int | None = Field(default=None, ge=0)
+    cache_huggingface: Path | None = None
+    cache_datasets: Path | None = None
+    cache_models: Path | None = None
 
     @model_validator(mode="after")
     def require_at_least_one_override(self) -> "ConfigOverrides":
@@ -93,6 +96,15 @@ def overrides_to_config_dict(overrides: ConfigOverrides) -> RawConfig:
         data = merge_config_dicts(data, {"runtime": {"output_root": overrides.output_root}})
     if overrides.seed is not None:
         data = merge_config_dicts(data, {"runtime": {"seed": overrides.seed}})
+    cache_overrides: RawConfig = {}
+    if overrides.cache_huggingface is not None:
+        cache_overrides["huggingface"] = overrides.cache_huggingface
+    if overrides.cache_datasets is not None:
+        cache_overrides["datasets"] = overrides.cache_datasets
+    if overrides.cache_models is not None:
+        cache_overrides["models"] = overrides.cache_models
+    if cache_overrides:
+        data = merge_config_dicts(data, {"cache": cache_overrides})
     return data
 
 

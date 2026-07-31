@@ -6,6 +6,12 @@ remote:
   timeout_seconds: 900
 
 storage:
-  volume_name: nlp-lab-artifacts
-  remote_root: /artifacts
-  hf_cache: /cache/huggingface
+  volume_name: nlp-lab-storage
+  remote_root: /storage
+  experiments_root: /storage/experiments
+  checkpoints_root: /storage/checkpoints
+  models_root: /storage/models
+  hf_cache: /storage/cache/huggingface
+  datasets_cache: /storage/cache/datasets
+  transformers_cache: /storage/cache/transformers
+  torch_cache: /storage/cache/torch

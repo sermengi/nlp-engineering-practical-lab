@@ -113,8 +113,46 @@ uv run --group remote modal run modal_apps/classification.py --gpu
 ```
 
 The GPU launcher defaults to `configs/experiments/modal_smoke_tiny_sst2_gpu.yaml`, which requests
-`inference.device: cuda`. Remote artifacts are written to the `nlp-lab-artifacts` Modal Volume under
-`/artifacts/experiments`.
+`inference.device: cuda`. Remote artifacts and caches are written to the `nlp-lab-storage` Modal
+Volume mounted at `/storage`.
+
+The initial storage layout is:
+
+```text
+/storage/
+├── cache/
+│   ├── huggingface/
+│   ├── datasets/
+│   └── transformers/
+├── experiments/
+├── checkpoints/
+└── models/
+```
+
+Remote experiment output defaults to `/storage/experiments`; local output still defaults to
+`outputs/experiments`. The artifact writer only receives the selected root path, so local and Modal
+runs use the same artifact lifecycle.
+
+Inspect the Volume from a Modal worker:
+
+```bash
+uv run --group remote modal run modal_apps/storage.py
+uv run --group remote modal run modal_apps/storage.py --path /storage/cache
+```
+
+List or download artifacts with Modal's Volume CLI:
+
+```bash
+uv run --group remote modal volume ls nlp-lab-storage /experiments
+uv run --group remote modal volume get nlp-lab-storage /experiments/<run-id> outputs/modal-downloads/<run-id>
+```
+
+For a cache-hit check, run the same classification command twice and compare `model_load_seconds`
+in each run's `runtime.json`. The Modal runner overrides experiment cache paths so Hugging Face,
+dataset, and model caches resolve under `/storage/cache` or `/storage/models`; the second run should
+reuse those files instead of downloading the model again. Cache is intentionally not deleted after
+each run; keep used models, selectively remove old checkpoints, and clean failed partial downloads
+when storage grows.
 
 ## Config Layers
 

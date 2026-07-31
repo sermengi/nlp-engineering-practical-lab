@@ -9,7 +9,7 @@ try:
         REMOTE_OUTPUT_ROOT,
         TIMEOUT_SECONDS,
         app,
-        commit_artifacts,
+        commit_storage,
         optional_positive_int,
         raise_modal_safe_experiment_error,
     )
@@ -20,7 +20,7 @@ except ModuleNotFoundError:
         REMOTE_OUTPUT_ROOT,
         TIMEOUT_SECONDS,
         app,
-        commit_artifacts,
+        commit_storage,
         optional_positive_int,
         raise_modal_safe_experiment_error,
     )
@@ -52,7 +52,7 @@ def run_dummy_smoke(
             raise_modal_safe_experiment_error(exc)
         raise
     finally:
-        commit_artifacts()
+        commit_storage()
 
 
 @app.function(cpu=CPU_COUNT, memory=MEMORY_MB, timeout=TIMEOUT_SECONDS)
@@ -81,7 +81,7 @@ def run_dummy_failure(
             raise_modal_safe_experiment_error(exc)
         raise
     finally:
-        commit_artifacts()
+        commit_storage()
 
 
 @app.local_entrypoint(name="dummy_smoke")

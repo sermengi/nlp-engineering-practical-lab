@@ -4,6 +4,12 @@ from typing import Any
 from nlp_lab.core.config import ConfigOverrides
 from nlp_lab.experiments.local import resolve_local_experiment
 from nlp_lab.experiments.runner import ExperimentRun, ExperimentRunner
+from nlp_lab.remote.storage import (
+    DATASETS_CACHE_DIR,
+    HF_CACHE_DIR,
+    REMOTE_EXPERIMENTS_ROOT,
+    REMOTE_MODELS_ROOT,
+)
 
 
 def run_modal_experiment(
@@ -11,7 +17,7 @@ def run_modal_experiment(
     experiment_config_path: str | Path,
     common_config_path: str | Path = "configs/common/default.yaml",
     experiment: str = "hf-text-classification",
-    output_root: str | Path = "/artifacts/experiments",
+    output_root: str | Path = REMOTE_EXPERIMENTS_ROOT,
     seed: int | None = None,
     max_samples: int | None = None,
     batch_size: int | None = None,
@@ -45,6 +51,9 @@ def build_modal_overrides(
             "seed": seed,
             "max_samples": max_samples,
             "batch_size": batch_size,
+            "cache_huggingface": HF_CACHE_DIR,
+            "cache_datasets": DATASETS_CACHE_DIR,
+            "cache_models": REMOTE_MODELS_ROOT,
         }
     )
 

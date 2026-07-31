@@ -11,7 +11,7 @@ try:
         REMOTE_OUTPUT_ROOT,
         TIMEOUT_SECONDS,
         app,
-        commit_artifacts,
+        commit_storage,
         optional_positive_int,
         raise_modal_safe_experiment_error,
     )
@@ -23,7 +23,7 @@ except ModuleNotFoundError:
         REMOTE_OUTPUT_ROOT,
         TIMEOUT_SECONDS,
         app,
-        commit_artifacts,
+        commit_storage,
         optional_positive_int,
         raise_modal_safe_experiment_error,
     )
@@ -98,7 +98,7 @@ def run_remote_classification(
             raise_modal_safe_experiment_error(exc)
         raise
     finally:
-        commit_artifacts()
+        commit_storage()
 
 
 @app.local_entrypoint(name="classification")

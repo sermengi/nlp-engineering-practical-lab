@@ -202,8 +202,13 @@ def test_load_modal_default_config() -> None:
     assert config.remote.provider == "modal"
     assert config.remote.cpu == 2
     assert config.remote.memory_mb == 4096
-    assert config.storage.volume_name == "nlp-lab-artifacts"
-    assert config.storage.remote_root == Path("/artifacts")
+    assert config.storage.volume_name == "nlp-lab-storage"
+    assert config.storage.remote_root == Path("/storage")
+    assert config.storage.experiments_root == Path("/storage/experiments")
+    assert config.storage.hf_cache == Path("/storage/cache/huggingface")
+    assert config.storage.datasets_cache == Path("/storage/cache/datasets")
+    assert config.storage.transformers_cache == Path("/storage/cache/transformers")
+    assert config.storage.torch_cache == Path("/storage/cache/torch")
 
 
 @pytest.mark.unit

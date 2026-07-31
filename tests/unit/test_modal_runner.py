@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from nlp_lab.experiments.runner import ExperimentRunFailedError
-from nlp_lab.remote import run_modal_experiment
+from nlp_lab.remote import build_modal_overrides, run_modal_experiment
 
 
 @pytest.mark.unit
@@ -42,3 +42,11 @@ def test_run_modal_experiment_preserves_failed_run_artifacts(tmp_path: Path) -> 
     paths = failure.value.paths
     assert paths.run_dir.exists()
     assert '"status": "FAILED"' in paths.run_metadata.read_text(encoding="utf-8")
+
+
+@pytest.mark.unit
+def test_modal_overrides_pin_cache_paths_to_storage_volume(tmp_path: Path) -> None:
+    overrides = build_modal_overrides(output_root=tmp_path)
+    assert overrides.cache_huggingface == Path("/storage/cache/huggingface")
+    assert overrides.cache_datasets == Path("/storage/cache/datasets")
+    assert overrides.cache_models == Path("/storage/models")
