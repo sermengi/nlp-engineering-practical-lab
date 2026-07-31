@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 from nlp_lab.core.config import ConfigOverrides
+from nlp_lab.core.parity import compare_run_parity, write_parity_report
 from nlp_lab.experiments.local import run_local_experiment
 from nlp_lab.experiments.runner import (
     CONFIG_VALIDATION_EXIT_CODE,
@@ -42,6 +43,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Temporary local experiment implementation.",
     )
     run_parser.set_defaults(handler=run_command)
+
+    compare_parser = subparsers.add_parser(
+        "compare-runs",
+        help="Compare local and remote run artifacts for parity.",
+    )
+    compare_parser.add_argument("--local-run-dir", required=True, type=Path)
+    compare_parser.add_argument("--remote-run-dir", required=True, type=Path)
+    compare_parser.add_argument("--metric-tolerance", type=float, default=1e-6)
+    compare_parser.add_argument("--confidence-tolerance", type=float, default=1e-4)
+    compare_parser.add_argument("--report", type=Path, default=None)
+    compare_parser.set_defaults(handler=compare_runs_command)
     return parser
 
 
@@ -80,6 +92,29 @@ def build_overrides(args: argparse.Namespace) -> ConfigOverrides | None:
     if not selected_overrides:
         return None
     return ConfigOverrides.model_validate(selected_overrides)
+
+
+def compare_runs_command(args: argparse.Namespace) -> int:
+    try:
+        report = compare_run_parity(
+            args.local_run_dir,
+            args.remote_run_dir,
+            metric_tolerance=args.metric_tolerance,
+            confidence_tolerance=args.confidence_tolerance,
+        )
+    except (OSError, ValueError) as exc:
+        print(f"Run parity comparison failed: {exc}", file=sys.stderr)
+        return CONFIG_VALIDATION_EXIT_CODE
+
+    if args.report is not None:
+        write_parity_report(args.report, report)
+
+    print(f"Parity status: {report.status}")
+    for check in report.checks:
+        print(f"- {check.name}: {check.status}")
+    if args.report is not None:
+        print(f"Parity report: {args.report}")
+    return SUCCESS_EXIT_CODE if report.passed else EXPERIMENT_FAILURE_EXIT_CODE
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -1,6 +1,9 @@
 LOCAL_SMOKE_OUTPUT_ROOT ?= outputs/experiments/local-smoke
+LOCAL_PARITY_RUN_DIR ?=
+REMOTE_PARITY_RUN_DIR ?=
+PARITY_REPORT ?= outputs/reports/local-remote-parity.json
 
-.PHONY: sync sync-all test test-unit test-integration test-smoke local-smoke lint format format-check typecheck check
+.PHONY: sync sync-all test test-unit test-integration test-smoke local-smoke compare-local-remote lint format format-check typecheck check
 
 sync:
 	uv sync
@@ -22,6 +25,9 @@ test-smoke:
 
 local-smoke:
 	uv run --group ml nlp-lab run --experiment hf-text-classification --config configs/experiments/local_smoke_tiny_sst2.yaml --output-root $(LOCAL_SMOKE_OUTPUT_ROOT)
+
+compare-local-remote:
+	uv run nlp-lab compare-runs --local-run-dir $(LOCAL_PARITY_RUN_DIR) --remote-run-dir $(REMOTE_PARITY_RUN_DIR) --report $(PARITY_REPORT)
 
 lint:
 	uv run --group development ruff check .
