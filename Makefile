@@ -1,4 +1,6 @@
-.PHONY: sync sync-all test test-unit test-integration test-smoke lint format format-check typecheck check
+LOCAL_SMOKE_OUTPUT_ROOT ?= outputs/experiments/local-smoke
+
+.PHONY: sync sync-all test test-unit test-integration test-smoke local-smoke lint format format-check typecheck check
 
 sync:
 	uv sync
@@ -17,6 +19,9 @@ test-integration:
 
 test-smoke:
 	uv run --all-groups pytest tests/smoke -m smoke
+
+local-smoke:
+	uv run --group ml nlp-lab run --experiment hf-text-classification --config configs/experiments/local_smoke_tiny_sst2.yaml --output-root $(LOCAL_SMOKE_OUTPUT_ROOT)
 
 lint:
 	uv run --group development ruff check .
