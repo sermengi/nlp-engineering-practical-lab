@@ -85,19 +85,19 @@ def test_dataset_max_samples_must_be_positive_when_set() -> None:
 @pytest.mark.unit
 def test_dataset_config_rejects_dataset_id_and_local_path_together() -> None:
     with pytest.raises(ValidationError, match="cannot both be provided"):
-        DatasetConfig(dataset_id="imdb", local_path="data/raw/sample.csv")
+        DatasetConfig(dataset_id="imdb", local_path="data/raw/sample.csv")  # type: ignore[arg-type]
 
 
 @pytest.mark.unit
 def test_runtime_output_root_must_not_be_empty() -> None:
     with pytest.raises(ValidationError, match="must not be empty"):
-        RuntimeConfig(output_root=" ")
+        RuntimeConfig(output_root=" ")  # type: ignore[arg-type]
 
 
 @pytest.mark.unit
 def test_model_dtype_must_be_supported() -> None:
     with pytest.raises(ValidationError):
-        ModelConfig(model_id="bert-base-uncased", dtype="int8")
+        ModelConfig(model_id="bert-base-uncased", dtype="int8")  # type: ignore[arg-type]
 
 
 @pytest.mark.unit

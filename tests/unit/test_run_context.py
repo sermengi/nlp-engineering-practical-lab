@@ -95,5 +95,5 @@ def test_run_context_rejects_unknown_runtime_objects(tmp_path: Path) -> None:
             config=config,
             execution_mode="local",
             git=GitState(commit="abc123", dirty=False),
-            model_object=object(),
+            model_object=object(),  # type: ignore[call-arg]
         )

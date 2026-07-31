@@ -9,6 +9,9 @@ dependencies = [
     "pyyaml",
 ]
 
+[project.scripts]
+nlp-lab = "nlp_lab.cli:main"
+
 [dependency-groups]
 core = [
     "numpy",

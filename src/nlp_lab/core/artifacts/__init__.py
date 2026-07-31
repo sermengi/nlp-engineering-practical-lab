@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from nlp_lab.core.artifacts.paths import (
     CONSOLE_LOG_FILENAME,
     ENVIRONMENT_FILENAME,
@@ -22,11 +24,13 @@ from nlp_lab.core.artifacts.serializers import (
     write_text_atomic,
     write_yaml,
 )
-from nlp_lab.core.artifacts.writer import (
-    ArtifactRunExistsError,
-    LocalFilesystemArtifactWriter,
-    build_local_artifact_writer,
-)
+
+if TYPE_CHECKING:
+    from nlp_lab.core.artifacts.writer import (
+        ArtifactRunExistsError,
+        LocalFilesystemArtifactWriter,
+        build_local_artifact_writer,
+    )
 
 __all__ = [
     "CONSOLE_LOG_FILENAME",
@@ -53,3 +57,24 @@ __all__ = [
     "write_text_atomic",
     "write_yaml",
 ]
+
+
+def __getattr__(name: str) -> object:
+    if name in {
+        "ArtifactRunExistsError",
+        "LocalFilesystemArtifactWriter",
+        "build_local_artifact_writer",
+    }:
+        from nlp_lab.core.artifacts.writer import (
+            ArtifactRunExistsError,
+            LocalFilesystemArtifactWriter,
+            build_local_artifact_writer,
+        )
+
+        exports = {
+            "ArtifactRunExistsError": ArtifactRunExistsError,
+            "LocalFilesystemArtifactWriter": LocalFilesystemArtifactWriter,
+            "build_local_artifact_writer": build_local_artifact_writer,
+        }
+        return exports[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
