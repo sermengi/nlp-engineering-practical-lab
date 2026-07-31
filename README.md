@@ -97,6 +97,25 @@ make test-integration
 make test-smoke
 ```
 
+Run the local Hugging Face smoke experiment:
+
+```bash
+make local-smoke
+```
+
+Run Modal launchers from the repository root:
+
+```bash
+uv run --group remote modal run modal_apps/smoke_test.py
+uv run --group remote modal run modal_apps/smoke_test.py --fail
+uv run --group remote modal run modal_apps/classification.py
+uv run --group remote modal run modal_apps/classification.py --gpu
+```
+
+The GPU launcher defaults to `configs/experiments/modal_smoke_tiny_sst2_gpu.yaml`, which requests
+`inference.device: cuda`. Remote artifacts are written to the `nlp-lab-artifacts` Modal Volume under
+`/artifacts/experiments`.
+
 ## Config Layers
 
 Experiment configs are resolved in three steps:

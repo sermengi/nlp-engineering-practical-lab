@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -35,6 +36,27 @@ def test_local_filesystem_writer_initializes_standard_run_directory(tmp_path: Pa
     assert paths.run_metadata.exists()
     assert paths.environment.exists()
     assert metadata.status == "RUNNING"
+
+
+@pytest.mark.unit
+def test_local_filesystem_writer_records_modal_environment_mode(tmp_path: Path) -> None:
+    config = load_layered_experiment_config(
+        "configs/common/default.yaml",
+        "configs/experiments/classification_baseline.yaml",
+        overrides={"output_root": tmp_path},
+    )
+    writer = LocalFilesystemArtifactWriter()
+
+    paths, metadata = writer.initialize_run(
+        config,
+        run_id="run-001",
+        execution_mode="modal",
+    )
+
+    environment = json.loads(paths.environment.read_text(encoding="utf-8"))
+    assert metadata.execution_mode == "modal"
+    assert environment["execution_mode"] == "modal"
+    assert "modal" in environment
 
 
 @pytest.mark.unit

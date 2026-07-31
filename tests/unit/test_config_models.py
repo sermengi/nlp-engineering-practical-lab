@@ -185,6 +185,16 @@ def test_load_classification_baseline_experiment_config() -> None:
 
 
 @pytest.mark.unit
+def test_load_modal_gpu_smoke_experiment_config() -> None:
+    config = load_experiment_config("configs/experiments/modal_smoke_tiny_sst2_gpu.yaml")
+
+    assert config.experiment.name == "modal-smoke-tiny-sst2-gpu"
+    assert config.inference.device == "cuda"
+    assert config.model.trust_remote_code is False
+    assert config.dataset.local_path == Path("data/raw/smoke_sst2.csv")
+
+
+@pytest.mark.unit
 def test_load_modal_default_config() -> None:
     config = load_modal_config("configs/modal/default.yaml")
 

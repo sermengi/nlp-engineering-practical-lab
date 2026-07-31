@@ -1,3 +1,4 @@
+import os
 import platform
 import socket
 import subprocess
@@ -45,6 +46,15 @@ class GitMetadata(StrictConfigModel):
     dirty: bool
 
 
+class ModalRuntimeInfo(StrictConfigModel):
+    task_id: str | None = None
+    cloud_provider: str | None = None
+    image_id: str | None = None
+    region: str | None = None
+    environment_name: str | None = None
+    is_remote: bool = False
+
+
 class EnvironmentInfo(StrictConfigModel):
     python: PythonEnvironmentInfo
     os: OperatingSystemInfo
@@ -54,6 +64,7 @@ class EnvironmentInfo(StrictConfigModel):
     git: GitMetadata
     execution_mode: ExecutionMode
     worker_id: str | None = None
+    modal: ModalRuntimeInfo | None = None
 
 
 def collect_environment_info(
@@ -61,6 +72,8 @@ def collect_environment_info(
     worker_id: str | None = None,
 ) -> EnvironmentInfo:
     cuda = collect_cuda_info()
+    modal = collect_modal_runtime_info() if execution_mode == "modal" else None
+    resolved_worker_id = worker_id or (modal.task_id if modal is not None else None)
     return EnvironmentInfo(
         python=PythonEnvironmentInfo(
             version=sys.version,
@@ -77,7 +90,8 @@ def collect_environment_info(
         cuda=cuda,
         git=collect_git_metadata(),
         execution_mode=execution_mode,
-        worker_id=worker_id,
+        worker_id=resolved_worker_id,
+        modal=modal,
     )
 
 
@@ -118,6 +132,17 @@ def collect_git_metadata() -> GitMetadata:
 
 def collect_hostname_worker_id() -> str:
     return socket.gethostname()
+
+
+def collect_modal_runtime_info() -> ModalRuntimeInfo:
+    return ModalRuntimeInfo(
+        task_id=os.environ.get("MODAL_TASK_ID"),
+        cloud_provider=os.environ.get("MODAL_CLOUD_PROVIDER"),
+        image_id=os.environ.get("MODAL_IMAGE_ID"),
+        region=os.environ.get("MODAL_REGION"),
+        environment_name=os.environ.get("MODAL_ENVIRONMENT"),
+        is_remote=os.environ.get("MODAL_IS_REMOTE") == "1",
+    )
 
 
 def git_output(command: list[str]) -> str | None:

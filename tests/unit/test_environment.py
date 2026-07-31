@@ -16,8 +16,14 @@ def test_collect_environment_info_returns_safe_reproducibility_metadata(
 ) -> None:
     monkeypatch.setenv("HF_TOKEN", "should-not-be-captured")
     monkeypatch.setenv("MODAL_TOKEN_SECRET", "should-not-be-captured")
+    monkeypatch.setenv("MODAL_TASK_ID", "ta-safe-worker")
+    monkeypatch.setenv("MODAL_CLOUD_PROVIDER", "aws")
+    monkeypatch.setenv("MODAL_IMAGE_ID", "im-safe-image")
+    monkeypatch.setenv("MODAL_REGION", "us-east-1")
+    monkeypatch.setenv("MODAL_ENVIRONMENT", "main")
+    monkeypatch.setenv("MODAL_IS_REMOTE", "1")
 
-    environment = collect_environment_info(execution_mode="modal", worker_id="worker-safe-id")
+    environment = collect_environment_info(execution_mode="modal")
     payload = environment.model_dump(mode="json")
 
     assert isinstance(environment, EnvironmentInfo)
@@ -28,7 +34,15 @@ def test_collect_environment_info_returns_safe_reproducibility_metadata(
     assert "cuda" in payload
     assert "git" in payload
     assert payload["execution_mode"] == "modal"
-    assert payload["worker_id"] == "worker-safe-id"
+    assert payload["worker_id"] == "ta-safe-worker"
+    assert payload["modal"] == {
+        "task_id": "ta-safe-worker",
+        "cloud_provider": "aws",
+        "image_id": "im-safe-image",
+        "region": "us-east-1",
+        "environment_name": "main",
+        "is_remote": True,
+    }
     assert "environment_variables" not in payload
     assert "pip_freeze" not in payload
     assert "username" not in payload

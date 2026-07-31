@@ -196,18 +196,19 @@ def initialize_run_artifacts(
 ) -> RunArtifactPaths:
     run_started_at = started_at or datetime.now().astimezone()
     paths = create_run_directory(config, run_id or generate_run_id(config, run_started_at))
-    write_resolved_config(paths.resolved_config, config)
-    write_run_metadata(
-        paths.run_metadata,
-        build_run_metadata(
-            config=config,
-            run_id=paths.run_dir.name,
-            status="RUNNING",
-            started_at=run_started_at,
-            execution_mode=execution_mode,
-        ),
+    metadata = build_run_metadata(
+        config=config,
+        run_id=paths.run_dir.name,
+        status="RUNNING",
+        started_at=run_started_at,
+        execution_mode=execution_mode,
     )
-    write_environment(paths.environment)
+    write_resolved_config(paths.resolved_config, config)
+    write_run_metadata(paths.run_metadata, metadata)
+    write_environment(
+        paths.environment,
+        collect_environment_info(execution_mode=metadata.execution_mode),
+    )
     return paths
 
 
